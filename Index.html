@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pesquisa de Satisfação — Grupo Procópio</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="wrap">
+  <div class="header">
+    <h1>Questionário de Satisfação dos(as) Colaboradores(as)</h1>
+    <p>Form IT RH01.01 01 — REV00 &nbsp;·&nbsp; DRH — Grupo Procópio</p>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="prog"></div></div>
+  <p class="progress-label" id="prog-label">0 de 53 perguntas respondidas</p>
+
+  <form id="form">
+
+    <div class="section">
+      <div class="section-title">Informações do colaborador</div>
+      <div class="info-grid">
+        <div class="info-field">
+          <label for="setor">Setor</label>
+          <select id="setor" name="setor" required>
+            <option value="">Selecione...</option>
+            <option>Administrativo / Comercial / Compras / Controladoria / Financeiro / Contábil / RH / TI / Portaria / Serv. Gerais / Apoio Adm. / Seg. Trabalho</option>
+            <option>Expedição / Logística / PCP / Almoxarifado / Controle M.P. / Cadastro / Custos / Desenv. Produtos / Controle de Qualidade</option>
+            <option>Extrusão T35 / Extrusão T90 / Mecânica Extrusora / Laminadora / Manutenção Mecânica / Manutenção Elétrica</option>
+            <option>Acabamento / Convertex / Impressão</option>
+            <option>Acabamento Big Bag / Corte Kit Big Bag</option>
+            <option>Lonas / Cortina / Trançadeira</option>
+            <option>Tecelagem Plana / Urdideira / Revisora</option>
+            <option>Tecelagem Circular / Tecelagem Circular Bag</option>
+          </select>
+        </div>
+        <div class="info-field">
+          <label for="escolaridade">Escolaridade</label>
+          <select id="escolaridade" name="escolaridade" required>
+            <option value="">Selecione...</option>
+            <option>Ensino Fundamental Incompleto (1ª a 4ª série)</option>
+            <option>Ensino Fundamental Completo (1º grau)</option>
+            <option>Ensino Médio Incompleto</option>
+            <option>Ensino Médio Completo</option>
+            <option>Ensino Superior Incompleto</option>
+            <option>Ensino Superior Completo</option>
+            <option>Especialização / MBA / Mestrado</option>
+          </select>
+        </div>
+        <div class="info-field full">
+          <label for="tempo">Tempo de empresa</label>
+          <select id="tempo" name="tempo" required>
+            <option value="">Selecione...</option>
+            <option>Há menos de 1 ano</option>
+            <option>Entre 1 a 3 anos</option>
+            <option>Entre 3 e 5 anos</option>
+            <option>Entre 5 e 10 anos</option>
+            <option>Mais de 10 anos</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="sec-politica"></div>
+    <div class="section" id="sec-funcao"></div>
+    <div class="section" id="sec-formacao"></div>
+    <div class="section" id="sec-remuneracao"></div>
+    <div class="section" id="sec-condicoes"></div>
+    <div class="section" id="sec-lideranca"></div>
+    <div class="section" id="sec-seguranca"></div>
+    <div class="section" id="sec-etica"></div>
+    <div class="section" id="sec-geral"></div>
+
+    <div class="section">
+      <div class="section-title">Escolha os 5 valores mais importantes no desempenho da sua função</div>
+      <p class="cb-note" id="cb-note">Selecione exatamente 5 opções.</p>
+      <div class="checkboxes" id="valores"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Enumere 3 questões que gostaria de ver respondidas pela empresa</div>
+      <div class="numbered-inputs">
+        <div class="numbered-input"><span>1)</span><textarea name="qe1" placeholder="Escreva aqui..."></textarea></div>
+        <div class="numbered-input"><span>2)</span><textarea name="qe2" placeholder="Escreva aqui..."></textarea></div>
+        <div class="numbered-input"><span>3)</span><textarea name="qe3" placeholder="Escreva aqui..."></textarea></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Mencione 3 sugestões de melhoria</div>
+      <div class="numbered-inputs">
+        <div class="numbered-input"><span>1)</span><textarea name="sug1" placeholder="Escreva aqui..."></textarea></div>
+        <div class="numbered-input"><span>2)</span><textarea name="sug2" placeholder="Escreva aqui..."></textarea></div>
+        <div class="numbered-input"><span>3)</span><textarea name="sug3" placeholder="Escreva aqui..."></textarea></div>
+      </div>
+    </div>
+
+    <div class="submit-area">
+      <button type="submit" class="btn-submit" id="btn-submit">Enviar respostas</button>
+      <p class="erro" id="erro"></p>
+    </div>
+
+  </form>
+
+  <div class="success-msg" id="success">
+    <div class="success-icon">✓</div>
+    <h2>Obrigado pela sua colaboração!</h2>
+    <p>Sua pesquisa foi enviada com sucesso. Suas respostas são muito importantes para o Grupo Procópio.</p>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://snpbcjtvoootlnkgpnqf.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_-Ua2XWfrny9d1gd7QwHbWw_etVIlfuI';
+
+const OTIMO = ['Ótimo', 'Bom', 'Regular', 'Ruim'];
+const SIMNAO = ['Sim', 'Não'];
+
+const secoes = [
+  { id: 'sec-politica', titulo: 'Política organizacional / Recursos humanos / Qualidade', perguntas: [
+    [1,'O orgulho que sinto em trabalhar no Grupo Procópio é:',OTIMO],
+    [2,'A forma de divulgação dos objetivos da empresa é:',OTIMO],
+    [3,'Considero a comunicação na empresa como:',OTIMO],
+    [4,'O tratamento que os(as) empregados(as) da Procópio recebem da empresa, em relação ao respeito e à dignidade das mulheres e homens no local de trabalho, é:',OTIMO],
+    [5,'Meu horário de trabalho permite um equilíbrio entre minha vida profissional, familiar e pessoal:',OTIMO],
+    [6,'A liberdade para expressar minhas ideias e sugestões é:',OTIMO],
+    [7,'A estabilidade e segurança financeira oferecida pela Procópio é:',OTIMO],
+    [8,'A divulgação dos regulamentos internos da empresa é:',OTIMO],
+    [9,'Considero o atendimento do setor de Recursos Humanos como:',OTIMO],
+    [10,'Considero o sistema de avaliação de desempenho como:',OTIMO],
+    [11,'Meu conhecimento e identificação com os objetivos do meu departamento é:',OTIMO],
+    [12,'Considero a política da qualidade da empresa (ex.: cumprimento de normas técnicas, padrões de execução, inspeções e melhoria contínua dos serviços):',OTIMO],
+    [13,'Considero a qualidade dos produtos que a empresa produz como (ex.: qualidade dos materiais entregues, acabamentos, qualidade da matéria-prima utilizada e durabilidade do produto final):',OTIMO],
+    [14,'Considero a tecnologia utilizada na Procópio como:',OTIMO],
+  ]},
+  { id: 'sec-funcao', titulo: 'Função desempenhada', perguntas: [
+    [15,'A motivação para realização do meu trabalho é:',OTIMO],
+    [16,'Considero que a diversificação das minhas atividades mantém minha motivação como:',OTIMO],
+    [17,'Os recursos e equipamentos necessários para realizar meu trabalho são:',OTIMO],
+    [18,'A utilização dos meus conhecimentos nas atividades que realizo na Procópio é:',OTIMO],
+    [19,'Julgo que no meu trabalho as oportunidades de tomar algumas decisões são:',OTIMO],
+    [20,'Considero que as oportunidades de evolução da minha carreira profissional dentro da Procópio são:',OTIMO],
+  ]},
+  { id: 'sec-formacao', titulo: 'Formação', perguntas: [
+    [21,'A integração que recebi foi:',OTIMO],
+    [22,'Considero a minha capacitação para desenvolver meu trabalho com qualidade como:',OTIMO],
+    [23,'Considero o incentivo recebido da empresa para aumentar minhas qualificações como: (parcerias, bolsas de estudos, troca de turno para estudar)',OTIMO],
+    [24,'A formação patrocinada pela Procópio para evolução da minha carreira profissional é: (parcerias, formações internas e externas, bolsas de estudos)',OTIMO],
+    [25,'As formações relacionadas à segurança do trabalho para o desempenho das minhas funções foram:',OTIMO],
+  ]},
+  { id: 'sec-remuneracao', titulo: 'Remuneração / Benefícios', perguntas: [
+    [26,'Considero a compatibilidade do salário que recebo com as atividades que realizo como:',OTIMO],
+    [27,'Considero a alimentação no refeitório como:',OTIMO],
+    [28,'Considero o Plano de Saúde (Paraná Clínicas) como:',OTIMO],
+    [29,'Considero o Plano Odontológico (Sul América) como:',OTIMO],
+    [30,'Considero o Vale Alimentação / Cesta básica como:',OTIMO],
+    [31,'Considero as lembranças das datas comemorativas (aniversário, Dia das Mães, Páscoa, Dia dos Pais) como:',OTIMO],
+  ]},
+  { id: 'sec-condicoes', titulo: 'Condições de trabalho', perguntas: [
+    [32,'Considero o tratamento que recebo pela empresa como:',OTIMO],
+    [33,'Considero a preocupação da Procópio com as condições do meu posto de trabalho como:',OTIMO],
+    [34,'Considero o apoio que recebo da Procópio em caso de problemas ou dificuldades particulares como:',OTIMO],
+  ]},
+  { id: 'sec-lideranca', titulo: 'Liderança e relacionamento pessoal', perguntas: [
+    [36,'A contribuição do meu chefe imediato para o meu desenvolvimento profissional é:',OTIMO],
+    [37,'O conhecimento técnico do meu chefe imediato:',OTIMO],
+    [38,'O tratamento / respeito que recebo do meu chefe imediato é:',OTIMO],
+    [39,'A comunicação sobre assuntos importantes da empresa realizada pelo meu chefe imediato é:',OTIMO],
+    [40,'O ambiente de trabalho de respeito dentro da empresa é:',OTIMO],
+    [41,'As divergências e os conflitos relacionados à minha área são resolvidos por minha liderança de forma:',OTIMO],
+    [42,'O relacionamento com meu chefe imediato é:',OTIMO],
+    [43,'O ambiente dentro do setor que trabalho é:',OTIMO],
+    [44,'Considero meu chefe imediato preparado para a função que exerce:',SIMNAO],
+    [45,'Você já presenciou alguma situação onde alguém foi tratado de forma diferente ou injusta devido ao seu gênero, raça, orientação sexual ou religião?',SIMNAO],
+  ]},
+  { id: 'sec-seguranca', titulo: 'Segurança e medicina do trabalho', perguntas: [
+    [46,'Considero as medidas de prevenção de acidentes de trabalho adotadas pela Procópio como:',OTIMO],
+    [47,'Considero o acompanhamento da Segurança do Trabalho como:',OTIMO],
+    [48,'A disponibilização de EPIs para o desempenho da minha função é:',OTIMO],
+    [49,'A integração de Segurança do Trabalho que recebi foi:',OTIMO],
+    [50,'Considero as condições do meu posto de trabalho (iluminação, ergonomia, temperatura) como:',OTIMO],
+  ]},
+  { id: 'sec-etica', titulo: 'Canal de ética e denúncia', perguntas: [
+    [51,'A empresa possui e divulga um canal de denúncias seguro e confidencial para relatar casos de assédio moral, assédio sexual ou qualquer forma de discriminação?',SIMNAO],
+    [52,'A empresa comunica de forma clara as regras e diretrizes de compliance que devem ser seguidas por todos?',SIMNAO],
+  ]},
+  { id: 'sec-geral', titulo: 'Satisfação geral', perguntas: [
+    [53,'Em geral, minha satisfação com a empresa e com o trabalho que desenvolvo é:',OTIMO],
+  ]},
+];
+
+const valoresOpts = [
+  'Respeito pelas pessoas','Trabalho em equipe','Bom ambiente entre as pessoas',
+  'Criatividade','Autonomia','Estabelecimento e cumprimento de normas internas',
+  'Estabilidade','Desenvolvimento e inovação tecnológica','Satisfação do cliente','Recompensas econômicas'
+];
+
+const answers = {};
+let answeredCount = 0;
+const TOTAL = 53;
+
+function buildSecao(secao) {
+  const el = document.getElementById(secao.id);
+  el.innerHTML = `<div class="section-title">${secao.titulo}</div>`;
+  secao.perguntas.forEach(([num, texto, opts]) => {
+    const div = document.createElement('div');
+    div.className = 'question';
+    div.innerHTML = `<p class="q-text"><span class="q-num">${num}.</span>${texto}</p><div class="radio-group" id="rg${num}"></div>`;
+    opts.forEach(opt => {
+      const lbl = document.createElement('label');
+      lbl.className = 'radio-opt';
+      lbl.textContent = opt;
+      lbl.addEventListener('click', () => selectOpt(num, opt, lbl, div.querySelector('.radio-group')));
+      div.querySelector('.radio-group').appendChild(lbl);
+    });
+    el.appendChild(div);
+  });
+}
+
+function selectOpt(num, val, clickedLbl, group) {
+  const prev = !answers[num];
+  answers[num] = val;
+  group.querySelectorAll('.radio-opt').forEach(b => b.classList.remove('selected'));
+  clickedLbl.classList.add('selected');
+  if (prev) { answeredCount++; updateProgress(); }
+}
+
+function updateProgress() {
+  const pct = Math.round((answeredCount / TOTAL) * 100);
+  document.getElementById('prog').style.width = pct + '%';
+  document.getElementById('prog-label').textContent = answeredCount + ' de ' + TOTAL + ' perguntas respondidas';
+}
+
+function buildValores() {
+  const sel = new Set();
+  const c = document.getElementById('valores');
+  valoresOpts.forEach(v => {
+    const lbl = document.createElement('label');
+    lbl.className = 'cb-opt';
+    lbl.textContent = v;
+    lbl.addEventListener('click', () => {
+      if (lbl.classList.contains('selected')) {
+        sel.delete(v); lbl.classList.remove('selected');
+      } else {
+        if (sel.size >= 5) return;
+        sel.add(v); lbl.classList.add('selected');
+      }
+      document.getElementById('cb-note').textContent = 'Selecionados: ' + sel.size + ' / 5';
+    });
+    c.appendChild(lbl);
+  });
+}
+
+secoes.forEach(buildSecao);
+buildValores();
+
+document.getElementById('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('btn-submit');
+  const erro = document.getElementById('erro');
+  btn.textContent = 'Enviando...';
+  btn.disabled = true;
+  erro.textContent = '';
+
+  const valoresSel = [...document.querySelectorAll('.cb-opt.selected')].map(el => el.textContent);
+  if (valoresSel.length !== 5) {
+    erro.textContent = 'Selecione exatamente 5 valores.';
+    btn.textContent = 'Enviar respostas';
+    btn.disabled = false;
+    return;
+  }
+
+  const fd = new FormData(e.target);
+  const payload = {
+    setor: fd.get('setor'),
+    escolaridade: fd.get('escolaridade'),
+    tempo_empresa: fd.get('tempo'),
+    respostas: answers,
+    valores: valoresSel,
+    questoes_empresa: [fd.get('qe1'), fd.get('qe2'), fd.get('qe3')],
+    sugestoes: [fd.get('sug1'), fd.get('sug2'), fd.get('sug3')],
+  };
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/respostas_satisfacao`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Erro ao enviar');
+    document.getElementById('form').style.display = 'none';
+    document.getElementById('success').style.display = 'block';
+    window.scrollTo(0, 0);
+  } catch (err) {
+    erro.textContent = 'Erro ao enviar. Tente novamente.';
+    btn.textContent = 'Enviar respostas';
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

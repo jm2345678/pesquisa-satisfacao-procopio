@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel RH — Pesquisa de Satisfação</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="login-wrap" id="login-wrap">
+  <div class="login-card">
+    <h1>Painel RH</h1>
+    <p>Pesquisa de Satisfação — Grupo Procópio</p>
+    <input type="password" id="senha-input" placeholder="Senha" />
+    <button class="btn-login" onclick="fazerLogin()">Entrar</button>
+    <p class="login-erro" id="login-erro"></p>
+  </div>
+</div>
+
+<div id="painel" style="display:none;">
+  <div class="painel-header">
+    <h1>Painel RH — Pesquisa de Satisfação</h1>
+    <a href="#" onclick="sair()">Sair</a>
+  </div>
+
+  <div class="painel-wrap">
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="label">Total de respostas</div>
+        <div class="value" id="stat-total">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Satisfação geral Ótimo/Bom</div>
+        <div class="value" id="stat-satisfacao">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Setor com mais respostas</div>
+        <div class="value" style="font-size:16px;padding-top:6px;" id="stat-setor">—</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem;">
+      <div class="tabela-section">
+        <h2>Satisfação geral (Pergunta 53)</h2>
+        <div style="padding:1rem"><canvas id="chart-geral"></canvas></div>
+      </div>
+      <div class="tabela-section">
+        <h2>Respostas por setor</h2>
+        <div style="padding:1rem"><canvas id="chart-setor"></canvas></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem;">
+      <div class="tabela-section">
+        <h2>Tempo de empresa</h2>
+        <div style="padding:1rem"><canvas id="chart-tempo"></canvas></div>
+      </div>
+      <div class="tabela-section">
+        <h2>Valores mais escolhidos</h2>
+        <div style="padding:1rem"><canvas id="chart-valores"></canvas></div>
+      </div>
+    </div>
+
+    <div class="tabela-section">
+      <h2>Todas as respostas <span onclick="exportarCSV()" style="float:right;font-size:12px;color:#2d7a4f;cursor:pointer;font-weight:400;">⬇ Exportar CSV</span></h2>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Data</th><th>Setor</th><th>Tempo</th><th>Escolaridade</th><th>Satisfação (P53)</th><th>Valores</th><th>Sugestões</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="tabela-section">
+        <h2>Questões para a empresa</h2>
+        <div id="lista-questoes" style="padding:1rem;font-size:13px;color:#444;"></div>
+      </div>
+      <div class="tabela-section">
+        <h2>Sugestões de melhoria</h2>
+        <div id="lista-sugestoes" style="padding:1rem;font-size:13px;color:#444;"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://snpbcjtvoootlnkgpnqf.supabase.co';
+const SUPABASE_SECRET = 'sb_secret_9zGrgODdMoQ1syyIudDnPg_gsHepqpS';
+const SENHA_RH = 'procopio2025';
+
+let dadosGlobais = [];
+
+function fazerLogin() {
+  const senha = document.getElementById('senha-input').value;
+  if (senha === SENHA_RH) {
+    document.getElementById('login-wrap').style.display = 'none';
+    document.getElementById('painel').style.display = 'block';
+    carregarDados();
+  } else {
+    document.getElementById('login-erro').textContent = 'Senha incorreta.';
+  }
+}
+
+document.getElementById('senha-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') fazerLogin();
+});
+
+function sair() {
+  document.getElementById('painel').style.display = 'none';
+  document.getElementById('login-wrap').style.display = 'flex';
+  document.getElementById('senha-input').value = '';
+}
+
+async function carregarDados() {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/respostas_satisfacao?select=*&order=criado_em.desc`, {
+      headers: {
+        'apikey': SUPABASE_SECRET,
+        'Authorization': `Bearer ${SUPABASE_SECRET}`,
+      }
+    });
+    dadosGlobais = await res.json();
+    renderizar(dadosGlobais);
+  } catch (err) {
+    alert('Erro ao carregar dados: ' + err.message);
+  }
+}
+
+function renderizar(dados) {
+  if (!Array.isArray(dados) || dados.length === 0) {
+    document.getElementById('stat-total').textContent = '0';
+    return;
+  }
+
+  document.getElementById('stat-total').textContent = dados.length;
+
+  const p53 = dados.map(d => d.respostas?.['53']).filter(Boolean);
+  const positivos = p53.filter(v => v === 'Ótimo' || v === 'Bom').length;
+  document.getElementById('stat-satisfacao').textContent = p53.length ? Math.round(positivos / p53.length * 100) + '%' : '—';
+
+  const setorCount = {};
+  dados.forEach(d => { if (d.setor) setorCount[d.setor] = (setorCount[d.setor] || 0) + 1; });
+  const topSetor = Object.entries(setorCount).sort((a, b) => b[1] - a[1])[0];
+  document.getElementById('stat-setor').textContent = topSetor ? topSetor[0].split('/')[0].trim() : '—';
+
+  const geralCount = { 'Ótimo': 0, 'Bom': 0, 'Regular': 0, 'Ruim': 0 };
+  p53.forEach(v => { if (geralCount[v] !== undefined) geralCount[v]++; });
+  renderPie('chart-geral', Object.keys(geralCount), Object.values(geralCount), ['#2d7a4f','#4aab77','#f0c040','#e05555']);
+
+  const setorLabels = Object.keys(setorCount).map(s => s.split('/')[0].trim());
+  renderBar('chart-setor', setorLabels, Object.values(setorCount), '#1a3a2a');
+
+  const tempoCount = {};
+  dados.forEach(d => { if (d.tempo_empresa) tempoCount[d.tempo_empresa] = (tempoCount[d.tempo_empresa] || 0) + 1; });
+  renderBar('chart-tempo', Object.keys(tempoCount), Object.values(tempoCount), '#2d7a4f');
+
+  const valCount = {};
+  dados.forEach(d => { (d.valores || []).forEach(v => { valCount[v] = (valCount[v] || 0) + 1; }); });
+  const valSorted = Object.entries(valCount).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  renderBar('chart-valores', valSorted.map(v => v[0]), valSorted.map(v => v[1]), '#4aab77');
+
+  const tbody = document.getElementById('tabela-body');
+  tbody.innerHTML = '';
+  dados.forEach((d, i) => {
+    const data = new Date(d.criado_em).toLocaleDateString('pt-BR');
+    const p53v = d.respostas?.['53'] || '—';
+    const badgeClass = { 'Ótimo': 'badge-otimo', 'Bom': 'badge-bom', 'Regular': 'badge-regular', 'Ruim': 'badge-ruim' }[p53v] || '';
+    tbody.innerHTML += `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${data}</td>
+        <td style="max-width:200px;font-size:12px">${d.setor || '—'}</td>
+        <td style="font-size:12px">${d.tempo_empresa || '—'}</td>
+        <td style="font-size:12px">${d.escolaridade || '—'}</td>
+        <td><span class="badge ${badgeClass}">${p53v}</span></td>
+        <td style="font-size:12px;max-width:180px">${(d.valores || []).join(', ')}</td>
+        <td style="font-size:12px;max-width:200px">${(d.sugestoes || []).filter(Boolean).join(' / ')}</td>
+      </tr>`;
+  });
+
+  const questoes = dados.flatMap(d => d.questoes_empresa || []).filter(Boolean);
+  document.getElementById('lista-questoes').innerHTML = questoes.length
+    ? questoes.map(q => `<p style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #f0f0ee">• ${q}</p>`).join('')
+    : '<p style="color:#aaa">Nenhuma resposta ainda.</p>';
+
+  const sugestoes = dados.flatMap(d => d.sugestoes || []).filter(Boolean);
+  document.getElementById('lista-sugestoes').innerHTML = sugestoes.length
+    ? sugestoes.map(s => `<p style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #f0f0ee">• ${s}</p>`).join('')
+    : '<p style="color:#aaa">Nenhuma resposta ainda.</p>';
+}
+
+function renderPie(id, labels, data, colors) {
+  const ctx = document.getElementById(id).getContext('2d');
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 1 }] },
+    options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+  });
+}
+
+function renderBar(id, labels, data, color) {
+  const ctx = document.getElementById(id).getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ data, backgroundColor: color }] },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: { x: { ticks: { font: { size: 11 } } }, y: { ticks: { font: { size: 11 } } } }
+    }
+  });
+}
+
+function exportarCSV() {
+  if (!dadosGlobais.length) return;
+  const headers = ['#','Data','Setor','Escolaridade','Tempo','Satisfação Geral (P53)','Valores','Questões','Sugestões'];
+  const rows = dadosGlobais.map((d, i) => [
+    i + 1,
+    new Date(d.criado_em).toLocaleDateString('pt-BR'),
+    d.setor || '',
+    d.escolaridade || '',
+    d.tempo_empresa || '',
+    d.respostas?.['53'] || '',
+    (d.valores || []).join('; '),
+    (d.questoes_empresa || []).filter(Boolean).join('; '),
+    (d.sugestoes || []).filter(Boolean).join('; '),
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'respostas_satisfacao.csv';
+  a.click();
+}
+</script>
+</body>
+</html>
